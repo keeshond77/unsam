@@ -11,7 +11,7 @@ TIPOS = {"T": "Temporal", "E": "Egreso", "O": "Oficio"}
 COLORS = {"Temporal": "#3977A8", "Egreso": "#36A47A", "Oficio": "#E39A3B"}
 
 st.title("📊 Seguimiento de bajas y recaudación")
-st.caption("Fuente: Google Sheets · Actualización automática cada 5 minutos · Datos identificatorios excluidos")
+#st.caption("Fuente: Google Sheets · Actualización automática cada 5 minutos · Datos identificatorios excluidos")
 
 def numero(valor):
     """Convierte números con formato argentino (1.234,56), moneda o porcentaje."""
@@ -173,7 +173,7 @@ with tab_bajas:
             st.info("No hay bajas para los filtros seleccionados.")
 
     st.subheader("Detalle por carrera (resumen de la planilla)")
-    st.caption("Estos porcentajes y cantidades provienen del bloque de gestión de Google Sheets, no del recuento del filtro.")
+    #st.caption("Estos porcentajes y cantidades provienen del bloque de gestión de Google Sheets, no del recuento del filtro.")
     view = carreras.rename(columns={"bajas_carrera": "Bajas", "carrera": "Carrera",
                                     "caida_pct": "Caída (%)", "al_inicio": "Al inicio",
                                     "cuatrimestral": "Cuatrimestral"}).copy()
@@ -188,7 +188,7 @@ with tab_bajas:
 
 with tab_recaudacion:
     st.subheader("Indicadores económicos")
-    st.caption("Importes tomados del bloque M11:N13 de Google Sheets; se actualizan con la misma lectura del CSV.")
+    #st.caption("Importes tomados del bloque M11:N13 de Google Sheets; se actualizan con la misma lectura del CSV.")
     if not financieros.empty:
         metric_cols = st.columns(len(financieros))
         for col, (_, row) in zip(metric_cols, financieros.iterrows()):
@@ -198,7 +198,7 @@ with tab_recaudacion:
 
     st.divider()
     st.subheader("Recaudación / importe cuatrimestral por carrera")
-    st.caption("Se conserva el valor calculado en la planilla para cada carrera.")
+    #st.caption("Se conserva el valor calculado en la planilla para cada carrera.")
     rc = recaudacion_carrera.copy()
     rc = rc.rename(columns={"Cuatrimestral": "Importe cuatrimestral"})
     rc["Bajas"] = rc["Bajas"].map(entero)
@@ -216,4 +216,4 @@ with tab_recaudacion:
         fig.update_layout(xaxis_title="Importe ($)", yaxis_title="", showlegend=False)
         st.plotly_chart(fig, use_container_width=True)
 
-st.caption("Códigos de la fuente: T = Temporal · E = Egreso · O = Oficio. No se muestran ni exportan nombres o DNI.")
+st.caption("Códigos de la fuente: T = Temporal · E = Egreso · O = Oficio.")
