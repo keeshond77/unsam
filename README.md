@@ -1,4 +1,6 @@
-# Dashboard de seguimiento de bajas (prototipo)
+# Dashboard de seguimiento de bajas
+
+Aplicación Streamlit conectada a la publicación CSV de Google Sheets.
 
 ## Ejecutar localmente
 
@@ -7,6 +9,14 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-La aplicación lee el CSV publicado de Google Sheets y refresca su caché cada cinco minutos. En la sidebar se puede cambiar el enlace CSV.
+## Publicar en Streamlit Community Cloud
 
-Este prototipo muestra métricas simples y agregaciones de las columnas de registro (fecha, carrera, tipo). No muestra nombres ni DNI. Los indicadores del bloque resumen de la planilla aún no se procesan.
+Subir `app.py` y `requirements.txt` a un repositorio GitHub y desplegar `app.py`.
+
+## Consideraciones
+
+- La publicación CSV debe corresponder a la pestaña `ACTUAL`.
+- La app excluye registros anteriores al 01/08/2026 para no mezclar la hoja histórica `2026` (febrero-julio) con la hoja vigente `ACTUAL` (agosto en adelante).
+- Tipos: T = Temporal, E = Egreso, O = Oficio.
+- Los nombres y DNI no se muestran ni se exportan.
+- La caché se actualiza cada 5 minutos.

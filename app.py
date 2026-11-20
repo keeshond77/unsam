@@ -52,6 +52,29 @@ antes_corte = len(records[records['fecha'] < FECHA_CORTE])
 records = records[records['fecha'] >= FECHA_CORTE].copy()
 records['tipo_nombre'] = records['tipo'].map(TIPOS)
 
+# La tabla ejecutiva está ubicada en G2:N12 de la misma pestaña ACTUAL.
+# Como forma parte del mismo CSV, se actualiza junto con los registros individuales.
+resumen = None
+if raw.shape[1] >= 14 and len(raw) >= 11:
+    bloque = raw.iloc[:11, 6:14].copy()
+    bloque.columns = ['indicador', 'valor', 'col_vacia', 'bajas_carrera', 'carrera', 'caida_pct', 'al_inicio', 'cuatrimestral']
+    bloque = bloque.reset_index(drop=True)
+
+    indicadores = bloque.iloc[1:8][['indicador', 'valor']].dropna(subset=['indicador']).copy()
+    indicadores['valor'] = pd.to_numeric(indicadores['valor'], errors='coerce')
+
+    carreras_resumen = bloque.iloc[1:9][['bajas_carrera', 'carrera', 'caida_pct', 'al_inicio', 'cuatrimestral']].copy()
+    for col in ['bajas_carrera', 'caida_pct', 'al_inicio', 'cuatrimestral']:
+        carreras_resumen[col] = pd.to_numeric(carreras_resumen[col], errors='coerce')
+    carreras_resumen = carreras_resumen.dropna(subset=['carrera'])
+    carreras_resumen['carrera'] = carreras_resumen['carrera'].astype(str).str.strip()
+
+    financieros = bloque.iloc[9:11][['al_inicio', 'cuatrimestral']].dropna(subset=['al_inicio']).copy()
+    financieros.columns = ['concepto', 'importe']
+    financieros['importe'] = pd.to_numeric(financieros['importe'], errors='coerce')
+
+    resumen = (indicadores, carreras_resumen, financieros, bloque.iloc[0, 0])
+
 if records.empty:
     st.error('No hay registros desde agosto de 2026 en el CSV recibido. Revisá que la publicación de Google Sheets corresponda a la pestaña ACTUAL y no a la pestaña histórica 2026.')
     if antes_corte:
@@ -79,6 +102,49 @@ c3.metric('Meses con registros', filtered['fecha'].dt.to_period('M').nunique())
 c4.metric('Última fecha', filtered['fecha'].max().strftime('%d/%m/%Y') if not filtered.empty else '—')
 
 st.divider()
+
+if resumen is not None:
+    indicadores, carreras_resumen, financieros, titulo_resumen = resumen
+    st.header('Resumen de gestión de la planilla')
+    st.caption(f'{titulo_resumen} · Rango G2:N12 de Google Sheets · Se actualiza automáticamente junto con los registros (cada 5 minutos).')
+    col_ind, col_carr = st.columns([0.85, 1.5])
+    with col_ind:
+        st.subheader('Indicadores generales')
+        if not indicadores.empty:
+            vista_ind = indicadores.copy()
+            def formato_indicador(row):
+                nombre = str(row['indicador']).strip()
+                valor = row['valor']
+                if pd.isna(valor):
+                    return '—'
+                if '%' in nombre:
+                    return f'{valor:.2f}%'
+                return f'{valor:,.0f}'.replace(',', '.')
+            vista_ind['valor'] = vista_ind.apply(formato_indicador, axis=1)
+            vista_ind = vista_ind.rename(columns={'indicador': 'Indicador', 'valor': 'Valor'})
+            st.dataframe(vista_ind, use_container_width=True, hide_index=True)
+    with col_carr:
+        st.subheader('Detalle por carrera')
+        if not carreras_resumen.empty:
+            vista_carr = carreras_resumen.rename(columns={
+                'bajas_carrera': 'Bajas', 'carrera': 'Carrera', 'caida_pct': 'Caída %',
+                'al_inicio': 'Al inicio', 'cuatrimestral': 'Cuatrimestral'
+            }).copy()
+            vista_carr['Caída %'] = vista_carr['Caída %'].map(lambda x: f'{x:.2f}%' if pd.notna(x) else '—')
+            vista_carr['Cuatrimestral'] = vista_carr['Cuatrimestral'].map(lambda x: f'$ {x:,.0f}'.replace(',', '.') if pd.notna(x) else '—')
+            vista_carr['Bajas'] = vista_carr['Bajas'].map(lambda x: f'{x:,.0f}'.replace(',', '.') if pd.notna(x) else '—')
+            vista_carr['Al inicio'] = vista_carr['Al inicio'].map(lambda x: f'{x:,.0f}'.replace(',', '.') if pd.notna(x) else '—')
+            st.dataframe(vista_carr, use_container_width=True, hide_index=True)
+    if not financieros.empty:
+        st.subheader('Indicadores económicos')
+        cols_fin = st.columns(len(financieros))
+        for col, (_, row) in zip(cols_fin, financieros.iterrows()):
+            importe = row['importe']
+            col.metric(str(row['concepto']), f'$ {importe:,.0f}'.replace(',', '.') if pd.notna(importe) else '—')
+    st.divider()
+else:
+    st.warning('No se pudo identificar el bloque G2:N12 en el CSV. Verificá que la publicación incluya la pestaña ACTUAL completa.')
+
 left, right = st.columns(2)
 with left:
     st.subheader('Bajas por carrera y tipo')
